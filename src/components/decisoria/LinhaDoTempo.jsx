@@ -78,8 +78,9 @@ export default function LinhaDoTempo() {
             <i className="inline-flex items-center gap-1.5 not-italic"><span className="inline-block rounded" style={{ width: 9, height: 9, background: "var(--warn)" }} />Reforma — projetada</i>
           </div>
 
+          {/* Margens menores: o PontoDoAno já ancora o texto à direita no último */}
           <ResponsiveContainer width="100%" height={240}>
-            <ComposedChart data={dadosDoGrafico} margin={{ top: 32, right: 40, bottom: 0, left: 16 }} onClick={(evento) => evento?.activeLabel && selecionarAno(evento.activeLabel)}>
+            <ComposedChart data={dadosDoGrafico} margin={{ top: 32, right: 16, bottom: 0, left: 8 }} onClick={(evento) => evento?.activeLabel && selecionarAno(evento.activeLabel)}>
               <defs>
                 <linearGradient id="gradienteReforma" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0" stopColor="rgba(243,177,60,.28)" />
@@ -99,7 +100,6 @@ export default function LinhaDoTempo() {
             </ComposedChart>
           </ResponsiveContainer>
 
-          {/* Eixo de anos: rola na horizontal no mobile, com largura mínima por item */}
           <div className="overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
             <div className="grid grid-cols-8 mt-1" style={{ minWidth: 520 }}>
               {anos.map((ano) => {
@@ -125,7 +125,6 @@ export default function LinhaDoTempo() {
             </div>
           </div>
 
-          {/* Painel da fase: empilha no mobile, lado a lado no desktop */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-3 mt-4 rounded-xl com-borda" style={{ padding: "15px 18px", background: "var(--ink-2)" }}>
             <div className="fonte-serif texto-alerta" style={{ fontSize: 29, fontWeight: 500, lineHeight: 1 }}>{anoSelecionado}</div>
             <div className="flex-1">

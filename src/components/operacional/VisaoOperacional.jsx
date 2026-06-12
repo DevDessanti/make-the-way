@@ -4,7 +4,6 @@ import Icone from "@/components/common/Icone";
 import BannerDeContexto from "@/components/common/BannerDeContexto";
 import { EsqueletoLista, EsqueletoTabela } from "@/components/common/EsqueletoDeCarregamento";
 import IndicadoresOperacionais from "./IndicadoresOperacionais";
-import BarraDeFiltros from "./BarraDeFiltros";
 import FilaDeExcecoes from "./FilaDeExcecoes";
 import TabelaDeItens from "./TabelaDeItens";
 
@@ -22,15 +21,16 @@ export default function VisaoOperacional() {
       </BannerDeContexto>
 
       <IndicadoresOperacionais />
-      <BarraDeFiltros />
 
+      {/* Até xl (1280px): empilha em uma coluna só.
+          A partir de xl: fila (320–380px) à esquerda, tabela ocupa o resto. */}
       {carregando || !excecoes ? (
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-[minmax(320px,380px)_minmax(0,1fr)] items-start">
+        <div className="grid gap-4 grid-cols-1 xl:grid-cols-[minmax(320px,380px)_minmax(0,1fr)] items-start">
           <EsqueletoLista itens={5} />
           <EsqueletoTabela linhas={6} />
         </div>
       ) : (
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-[minmax(320px,380px)_minmax(0,1fr)] items-start">
+        <div className="grid gap-4 grid-cols-1 xl:grid-cols-[minmax(320px,380px)_minmax(0,1fr)] items-start">
           <FilaDeExcecoes excecoes={excecoes} />
           <TabelaDeItens excecoes={excecoes} />
         </div>

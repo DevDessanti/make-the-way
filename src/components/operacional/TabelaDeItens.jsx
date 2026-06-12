@@ -8,6 +8,9 @@ import CaixaDeSelecao from "@/components/common/CaixaDeSelecao";
 import Card from "@/components/ui/Card";
 import Botao from "@/components/ui/Botao";
 import Etiqueta from "@/components/ui/Etiqueta";
+import Chip from "@/components/ui/Chip";
+import Selo from "@/components/ui/Selo";
+import SeletorSuspenso from "@/components/ui/SeletorSuspenso";
 import CampoDeBusca from "@/components/ui/CampoDeBusca";
 
 const ESTILO_CABECALHO = {
@@ -19,10 +22,7 @@ const ESTILO_CELULA = { padding: "11px 14px", borderBottom: "1px solid var(--hai
 /** Linha da tabela no formato de card (usado só no mobile). */
 function CartaoDeItem({ item, marcada, aoMarcar }) {
   return (
-    <div
-      className="rounded-xl com-borda"
-      style={{ padding: "12px 14px", background: marcada ? "var(--brand-tint)" : "var(--surface)" }}
-    >
+    <div className="rounded-xl com-borda" style={{ padding: "12px 14px", background: marcada ? "var(--brand-tint)" : "var(--surface)" }}>
       <div className="flex items-center gap-2 mb-2">
         <CaixaDeSelecao marcado={marcada} aoClicar={aoMarcar} />
         <b className="fonte-mono flex-1" style={{ fontSize: 12.5 }}>{item.chave}</b>
@@ -47,7 +47,7 @@ function CartaoDeItem({ item, marcada, aoMarcar }) {
   );
 }
 
-/** Tabela de itens da exceção selecionada, com busca, filtros e seleção em lote. */
+/** Tabela de itens da exceção: cabeçalho + busca + filtros + lista/tabela. */
 export default function TabelaDeItens({ excecoes }) {
   const excecaoSelecionada = useAppStore((estado) => estado.excecaoSelecionada);
   const filtros = useAppStore((estado) => estado.filtros);
@@ -55,6 +55,17 @@ export default function TabelaDeItens({ excecoes }) {
   const chavesSelecionadas = useAppStore((estado) => estado.chavesSelecionadas);
   const alternarLinha = useAppStore((estado) => estado.alternarLinha);
   const alternarTodasAsLinhas = useAppStore((estado) => estado.alternarTodasAsLinhas);
+
+  // Empresas e tipos de documento para os dropdowns
+  const { dados: cadastros } = useApi("/operacional/empresas");
+  const opcoesDeTipoDocumento = [
+    { valor: "todos", rotulo: "Todos" },
+    ...(cadastros?.tiposDeDocumento || []).map((tipo) => ({ valor: tipo, rotulo: tipo })),
+  ];
+  const opcoesDeCnpj = [
+    { valor: "todos", rotulo: `Todos · ${cadastros?.empresas?.length ?? "…"}` },
+    ...(cadastros?.empresas || []).map((empresa) => ({ valor: empresa.cnpj, rotulo: `${empresa.nome} · ${empresa.cnpj}` })),
+  ];
 
   const rotaDosItens = useMemo(() => {
     const parametros = new URLSearchParams({
@@ -76,29 +87,63 @@ export default function TabelaDeItens({ excecoes }) {
 
   return (
     <Card className="flex flex-col">
-      {/* Cabeçalho: título + ações */}
-      <div className="flex items-start gap-3 px-4 sm:px-5 pt-4 pb-3" style={{ borderBottom: "1px solid var(--hair)" }}>
-        <div className="min-w-0 flex-1">
-          <b style={{ fontSize: 14 }}>{excecao.titulo}</b>
-          <span className="block texto-apagado mt-0.5" style={{ fontSize: "11.5px" }}>
-            {excecao.quantidadeItens} itens · {excecao.motivoBloqueio ? `${excecao.motivoBloqueio} · ` : ""}impacto {excecao.impactoFinanceiro}
-          </span>
+      {/* ── Cabeçalho ── */}
+      <div className="px-4 sm:px-5 py-4" style={{ borderBottom: "1px solid var(--hair)" }}>
+        {/* Título + botões: empilha no mobile, lado a lado no desktop */}
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <b className="block" style={{ fontSize: 14, lineHeight: 1.3 }}>{excecao.titulo}</b>
+            <span className="block texto-apagado mt-0.5" style={{ fontSize: "11.5px" }}>
+              {excecao.quantidadeItens} itens · {excecao.motivoBloqueio ? `${excecao.motivoBloqueio} · ` : ""}impacto {excecao.impactoFinanceiro}
+            </span>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Botao icone={["M12 5v14M5 12h14"]} className="flex-1 sm:flex-none justify-center">Justificar</Botao>
+            <Botao variante="primario" icone={["M9 11l3 3 8-8"]} className="flex-1 sm:flex-none justify-center">
+              <span className="hidden sm:inline">Corrigir em lote</span>
+              <span className="sm:hidden">Corrigir</span>
+            </Botao>
+          </div>
         </div>
-        <div className="flex gap-2 shrink-0">
-          <Botao icone={["M12 5v14M5 12h14"]} className="hidden sm:inline-flex">Justificar</Botao>
-          <Botao variante="primario" icone={["M9 11l3 3 8-8"]}>
-            <span className="hidden sm:inline">Corrigir em lote</span>
-            <span className="sm:hidden">Corrigir</span>
-          </Botao>
-        </div>
-      </div>
 
-      {/* Busca da tabela: aqui é o lugar certo — filtra estes itens */}
-      <div className="px-4 sm:px-5 py-3" style={{ borderBottom: "1px solid var(--hair)" }}>
-        <CampoDeBusca
-          placeholder="Buscar chave, NCM, participante…"
-          aoBuscar={(texto) => definirFiltro("busca", texto)}
-        />
+        {/* Busca + filtros (tudo que filtra esta tabela, junto) */}
+        <div className="mt-3 flex flex-col gap-2.5">
+          <CampoDeBusca
+            placeholder="Buscar chave, NCM, participante…"
+            aoBuscar={(texto) => definirFiltro("busca", texto)}
+          />
+
+          {/* Filtros em faixa rolável (mobile) / em linha (desktop) */}
+          <div className="flex items-center gap-2.5 overflow-x-auto pb-1 sm:flex-wrap" style={{ scrollbarWidth: "none" }}>
+            <div className="shrink-0">
+              <SeletorSuspenso
+                rotulo="Tipo doc"
+                opcoes={opcoesDeTipoDocumento}
+                valorSelecionado={filtros.tipoDocumento}
+                aoSelecionar={(valor) => definirFiltro("tipoDocumento", valor)}
+              />
+            </div>
+
+            <Chip variante="desativado" comSeta title="Em breve" className="shrink-0">
+              Severidade <b className="texto-secundario" style={{ fontWeight: 600 }}>Alta</b>
+              <Selo tom="marca" tamanho="mini" style={{ marginLeft: 4 }}>Em breve</Selo>
+            </Chip>
+
+            <div className="shrink-0">
+              <SeletorSuspenso
+                rotulo="CNPJ"
+                opcoes={opcoesDeCnpj}
+                valorSelecionado={filtros.cnpj}
+                aoSelecionar={(valor) => definirFiltro("cnpj", valor)}
+              />
+            </div>
+
+            <Chip variante="desativado" comSeta title="Em breve" className="shrink-0">
+              Status <b className="texto-secundario" style={{ fontWeight: 600 }}>Aberto</b>
+              <Selo tom="marca" tamanho="mini" style={{ marginLeft: 4 }}>Em breve</Selo>
+            </Chip>
+          </div>
+        </div>
       </div>
 
       {/* Barra de ações em lote */}

@@ -2,13 +2,7 @@ import Icone from "@/components/common/Icone";
 
 /**
  * Botão padrão da aplicação.
- *
- * Variantes:
- * - "padrao":   fundo translúcido com borda fina (ações secundárias)
- * - "primario": fundo na cor da marca (ação principal da tela)
- *
- * Exemplo:
- *   <Botao variante="primario" icone={["M9 11l3 3 8-8"]}>Corrigir em lote</Botao>
+ * Variantes: "padrao" (secundário) | "primario" (ação principal).
  */
 const VISUAL_POR_VARIANTE = {
   padrao: {
@@ -26,7 +20,7 @@ export default function Botao({ variante = "padrao", icone, children, className 
 
   return (
     <button
-      className={`inline-flex items-center gap-1.5 rounded-lg cursor-pointer ${visual.classes} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-lg cursor-pointer whitespace-nowrap ${visual.classes} ${className}`}
       style={{ fontSize: 12, padding: "7px 13px", fontFamily: "var(--sans)", ...visual.estilo, ...style }}
       {...outrasProps}
     >
