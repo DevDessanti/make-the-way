@@ -146,6 +146,6 @@ export default function LinhaDoTempo() {
           </div>
         </Card>
       </RevelarAoRolar>
-    </div>
+    </div> 
   );
 }

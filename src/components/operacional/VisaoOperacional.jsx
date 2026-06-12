@@ -37,4 +37,4 @@ export default function VisaoOperacional() {
       )}
     </section>
   );
-}
+} 

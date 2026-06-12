@@ -10,7 +10,7 @@ const VISUAL_POR_VARIANTE = {
     estilo: {},
   },
   primario: {
-    classes: "font-semibold",
+    classes: "font-semibold", 
     estilo: { background: "var(--brand)", border: "1px solid var(--brand)", color: "#04221c" },
   },
 };

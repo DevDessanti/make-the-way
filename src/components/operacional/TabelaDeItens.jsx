@@ -237,4 +237,4 @@ export default function TabelaDeItens({ excecoes }) {
       )}
     </Card>
   );
-}
+} 
