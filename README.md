@@ -2,7 +2,7 @@
 
 Plataforma web de análise do impacto da **Reforma Tributária brasileira (EC 132/2023 · LC 214/2025)** sobre a operação de empresas. Compara a carga do regime atual (IPI · PIS · COFINS · ICMS) com a projetada no novo regime (CBS · IBS · Imposto Seletivo), ao longo da transição 2026–2033.
 
-> ⚠️ Dados atuais são de **demonstração** e não constituem aconselhamento fiscal ou jurídico. A paleta de cores é **provisória**, sujeita ao manual de marca.
+> ⚠️ Dados atuais são de **demonstração** e não constituem aconselhamento fiscal ou jurídico.
 
 ---
 
@@ -208,7 +208,7 @@ Precisa de botão/card/chip/tag/selo/dropdown/busca? **Use `components/ui/`** �
 
 ---
 
-## Decisões técnicas (e armadilhas já resolvidas)
+## Decisões técnicas
 
 - **`"use client"`** em todo componente com hooks/store/eventos.
 - **Componentes auxiliares fora do componente pai** (ex.: `BotaoDeCamada`) — declarar dentro causa "Cannot create components during render".
@@ -247,7 +247,7 @@ Versione um `.env.example` com o mesmo conteúdo (sem segredos).
 
 ---
 
-## Evolução futura (recomendado, quando crescer)
+## Evolução futura (recomendado, em breve)
 
 1. **TypeScript** — tipagem dos dados da API; pega erros em build, não em runtime.
 2. **TanStack Query (React Query)** no lugar do `useApi` caseiro — cache, revalidação, retry, dedupe.
