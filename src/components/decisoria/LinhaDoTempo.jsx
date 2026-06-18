@@ -68,6 +68,14 @@ export default function LinhaDoTempo() {
   const diferencaVsAtual = cargaRegimeReforma[indiceDoAno] - cargaRegimeAtual[0];
   const fase = fases[anoSelecionado];
 
+  // Domínio do eixo Y calculado a partir dos dados. Antes era fixo em [14, 27]
+  // (escala do mock, ~15–26 milhões). Com os valores reais — bem menores — tudo
+  // caía fora dessa faixa e o gráfico achatava no rodapé. Agora começa em 0 e
+  // dá 15% de folga acima do maior valor, então a curva da reforma e a linha
+  // plana da atual aparecem na proporção correta, seja qual for a escala.
+  const valorMaximo = Math.max(...cargaRegimeAtual, ...cargaRegimeReforma);
+  const dominioY = [0, valorMaximo * 1.15 || 1];
+
   return (
     <div>
       <TituloDeSecao titulo="Linha do tempo da transição" dica="selecione o ano-base" />
@@ -89,7 +97,7 @@ export default function LinhaDoTempo() {
               </defs>
               <CartesianGrid stroke="rgba(255,255,255,.05)" vertical={false} />
               <XAxis dataKey="ano" axisLine={false} tickLine={false} tick={{ fill: "var(--muted)", fontSize: 12, fontFamily: "var(--mono)" }} />
-              <YAxis hide domain={[14, 27]} />
+              <YAxis hide domain={dominioY} />
               <Tooltip content={<TooltipDoGrafico />} cursor={{ stroke: "var(--warn)", strokeOpacity: 0.3 }} />
               <ReferenceLine x={anoSelecionado} stroke="var(--warn)" strokeOpacity={0.4} />
               <Area type="monotone" dataKey="regimeReforma" stroke="none" fill="url(#gradienteReforma)" />
@@ -146,6 +154,6 @@ export default function LinhaDoTempo() {
           </div>
         </Card>
       </RevelarAoRolar>
-    </div> 
+    </div>
   );
 }

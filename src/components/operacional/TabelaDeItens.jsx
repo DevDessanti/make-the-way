@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { useApi } from "@/hooks/useApi";
 import { EsqueletoTabela } from "@/components/common/EsqueletoDeCarregamento";
@@ -19,13 +19,27 @@ const ESTILO_CABECALHO = {
 };
 const ESTILO_CELULA = { padding: "11px 14px", borderBottom: "1px solid var(--hair)", whiteSpace: "nowrap" };
 
+// Opções de "itens por página" (a API tem teto de 200). Padrão: 20.
+const OPCOES_POR_PAGINA = [20, 50, 100, 200];
+const PADRAO_POR_PAGINA = 20;
+
+/**
+ * A chave da NF-e tem 44 dígitos. Encurtamos só para EXIBIR
+ * (8 primeiros + 6 últimos); a chave inteira fica no title (hover)
+ * e continua sendo a identidade usada na seleção.
+ */
+function truncarChave(chave) {
+  if (!chave) return "";
+  return chave.length > 20 ? `${chave.slice(0, 8)}…${chave.slice(-6)}` : chave;
+}
+
 /** Linha da tabela no formato de card (usado só no mobile). */
 function CartaoDeItem({ item, marcada, aoMarcar }) {
   return (
     <div className="rounded-xl com-borda" style={{ padding: "12px 14px", background: marcada ? "var(--brand-tint)" : "var(--surface)" }}>
       <div className="flex items-center gap-2 mb-2">
         <CaixaDeSelecao marcado={marcada} aoClicar={aoMarcar} />
-        <b className="fonte-mono flex-1" style={{ fontSize: 12.5 }}>{item.chave}</b>
+        <b className="fonte-mono flex-1" style={{ fontSize: 12.5 }} title={item.chave}>{truncarChave(item.chave)}</b>
         <Etiqueta tom="alerta">{item.status}</Etiqueta>
       </div>
       <div className="texto-principal" style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{item.participante}</div>
@@ -47,7 +61,7 @@ function CartaoDeItem({ item, marcada, aoMarcar }) {
   );
 }
 
-/** Tabela de itens da exceção: cabeçalho + busca + filtros + lista/tabela. */
+/** Tabela de itens da exceção: cabeçalho + busca + filtros + lista/tabela + paginação. */
 export default function TabelaDeItens({ excecoes }) {
   const excecaoSelecionada = useAppStore((estado) => estado.excecaoSelecionada);
   const filtros = useAppStore((estado) => estado.filtros);
@@ -55,6 +69,23 @@ export default function TabelaDeItens({ excecoes }) {
   const chavesSelecionadas = useAppStore((estado) => estado.chavesSelecionadas);
   const alternarLinha = useAppStore((estado) => estado.alternarLinha);
   const alternarTodasAsLinhas = useAppStore((estado) => estado.alternarTodasAsLinhas);
+
+  // Página atual da tabela (estado local da TabelaDeItens).
+  const [pagina, setPagina] = useState(1);
+  // Quantos itens por página — o usuário escolhe; padrão 20.
+  const [porPagina, setPorPagina] = useState(PADRAO_POR_PAGINA);
+
+  // Volta para a página 1 quando muda a exceção ou qualquer filtro — SEM
+  // useEffect. Ajustamos o estado DURANTE a renderização, comparando uma
+  // "assinatura" dos filtros com a anterior. Chamar setState no corpo do
+  // render (só quando há mudança) é o padrão recomendado pelo React para
+  // este caso, e não dispara o aviso de "setState dentro de effect".
+  const assinaturaDosFiltros = `${excecaoSelecionada}|${filtros.busca}|${filtros.tipoDocumento}|${filtros.cnpj}`;
+  const [assinaturaAnterior, setAssinaturaAnterior] = useState(assinaturaDosFiltros);
+  if (assinaturaDosFiltros !== assinaturaAnterior) {
+    setAssinaturaAnterior(assinaturaDosFiltros);
+    setPagina(1);
+  }
 
   // Empresas e tipos de documento para os dropdowns
   const { dados: cadastros } = useApi("/operacional/empresas");
@@ -72,15 +103,20 @@ export default function TabelaDeItens({ excecoes }) {
       busca: filtros.busca,
       tipoDocumento: filtros.tipoDocumento,
       cnpj: filtros.cnpj,
+      pagina: String(pagina),
+      porPagina: String(porPagina),
     }).toString();
     return `/operacional/excecoes/${excecaoSelecionada}/itens?${parametros}`;
-  }, [excecaoSelecionada, filtros.busca, filtros.tipoDocumento, filtros.cnpj]);
+  }, [excecaoSelecionada, filtros.busca, filtros.tipoDocumento, filtros.cnpj, pagina, porPagina]);
 
   const { dados, carregando } = useApi(rotaDosItens);
 
   const excecao = excecoes.find((cadaExcecao) => cadaExcecao.id === excecaoSelecionada);
   const itens = dados?.itens || [];
-  const chavesVisiveis = itens.map((item) => item.chave);
+  const total = dados?.total ?? itens.length;
+  const totalPaginas = dados?.totalPaginas ?? 1;
+  // Identidade da seleção = item.id (a Chave da NF-e se repete entre itens da nota).
+  const chavesVisiveis = itens.map((item) => item.id);
   const todasMarcadas = chavesVisiveis.length > 0 && chavesVisiveis.every((chave) => chavesSelecionadas.includes(chave));
 
   if (!excecao) return null;
@@ -89,7 +125,6 @@ export default function TabelaDeItens({ excecoes }) {
     <Card className="flex flex-col">
       {/* ── Cabeçalho ── */}
       <div className="px-4 sm:px-5 py-4" style={{ borderBottom: "1px solid var(--hair)" }}>
-        {/* Título + botões: empilha no mobile, lado a lado no desktop */}
         <div className="flex flex-col sm:flex-row sm:items-start gap-3">
           <div className="min-w-0 flex-1">
             <b className="block" style={{ fontSize: 14, lineHeight: 1.3 }}>{excecao.titulo}</b>
@@ -113,7 +148,6 @@ export default function TabelaDeItens({ excecoes }) {
             aoBuscar={(texto) => definirFiltro("busca", texto)}
           />
 
-          {/* Filtros em faixa rolável (mobile) / em linha (desktop) */}
           <div className="flex items-center gap-2.5 overflow-x-auto pb-1 sm:flex-wrap" style={{ scrollbarWidth: "none" }}>
             <div className="shrink-0">
               <SeletorSuspenso
@@ -175,10 +209,10 @@ export default function TabelaDeItens({ excecoes }) {
           <div className="sm:hidden flex flex-col gap-2.5 p-3">
             {itens.map((item) => (
               <CartaoDeItem
-                key={item.chave}
+                key={item.id}
                 item={item}
-                marcada={chavesSelecionadas.includes(item.chave)}
-                aoMarcar={() => alternarLinha(item.chave)}
+                marcada={chavesSelecionadas.includes(item.id)}
+                aoMarcar={() => alternarLinha(item.id)}
               />
             ))}
           </div>
@@ -202,18 +236,17 @@ export default function TabelaDeItens({ excecoes }) {
                   <th style={{ ...ESTILO_CABECALHO, textAlign: "right" }}>Trib. atual</th>
                   <th style={{ ...ESTILO_CABECALHO, textAlign: "right" }}>Trib. reforma</th>
                   <th style={ESTILO_CABECALHO}>Status</th>
-                  <th style={ESTILO_CABECALHO}></th>
                 </tr>
               </thead>
               <tbody>
                 {itens.map((item) => {
-                  const estaMarcada = chavesSelecionadas.includes(item.chave);
+                  const estaMarcada = chavesSelecionadas.includes(item.id);
                   return (
-                    <tr key={item.chave}>
+                    <tr key={item.id}>
                       <td style={ESTILO_CELULA}>
-                        <CaixaDeSelecao marcado={estaMarcada} aoClicar={() => alternarLinha(item.chave)} />
+                        <CaixaDeSelecao marcado={estaMarcada} aoClicar={() => alternarLinha(item.id)} />
                       </td>
-                      <td className="fonte-mono texto-secundario" style={ESTILO_CELULA}>{item.chave}</td>
+                      <td className="fonte-mono texto-secundario" style={ESTILO_CELULA} title={item.chave}>{truncarChave(item.chave)}</td>
                       <td className="fonte-mono" style={ESTILO_CELULA}>{item.data}</td>
                       <td className="fonte-mono texto-secundario" style={ESTILO_CELULA}>{item.tipoDocumento}</td>
                       <td style={ESTILO_CELULA}>{item.participante}</td>
@@ -226,15 +259,45 @@ export default function TabelaDeItens({ excecoes }) {
                       <td className="fonte-mono texto-positivo" style={{ ...ESTILO_CELULA, textAlign: "right" }}>{item.tributoAtual}</td>
                       <td className="fonte-mono texto-alerta" style={{ ...ESTILO_CELULA, textAlign: "right" }}>{item.tributoReforma}</td>
                       <td style={ESTILO_CELULA}><Etiqueta tom="alerta">{item.status}</Etiqueta></td>
-                      <td style={ESTILO_CELULA}><span className="texto-marca font-semibold cursor-pointer" style={{ fontSize: 12 }}>resolver</span></td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
+
+          {/* ── Paginação ── */}
+          <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3" style={{ borderTop: "1px solid var(--hair)", fontSize: "12px" }}>
+            <span className="texto-apagado">
+              {total} itens · página <b className="fonte-mono texto-secundario">{pagina}</b> de <b className="fonte-mono texto-secundario">{totalPaginas}</b>
+            </span>
+            <div className="flex items-center gap-2.5">
+              <SeletorSuspenso
+                rotulo="Por página"
+                opcoes={OPCOES_POR_PAGINA.map((n) => ({ valor: String(n), rotulo: String(n) }))}
+                valorSelecionado={String(porPagina)}
+                aoSelecionar={(valor) => { setPorPagina(Number(valor)); setPagina(1); }}
+              />
+              <button
+                onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                disabled={pagina <= 1}
+                className="com-borda rounded-lg"
+                style={{ padding: "6px 12px", background: "var(--surface)", color: "var(--text)", cursor: pagina <= 1 ? "not-allowed" : "pointer", opacity: pagina <= 1 ? 0.4 : 1 }}
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                disabled={pagina >= totalPaginas}
+                className="com-borda rounded-lg"
+                style={{ padding: "6px 12px", background: "var(--surface)", color: "var(--text)", cursor: pagina >= totalPaginas ? "not-allowed" : "pointer", opacity: pagina >= totalPaginas ? 0.4 : 1 }}
+              >
+                Próxima
+              </button>
+            </div>
+          </div>
         </>
       )}
     </Card>
   );
-} 
+}
