@@ -1,4 +1,5 @@
 "use client";
+import { useAppStore } from "@/store/useAppStore";
 import { useApi } from "@/hooks/useApi";
 import RevelarAoRolar from "@/components/common/RevelarAoRolar";
 import { EsqueletoGradeDeCards } from "@/components/common/EsqueletoDeCarregamento";
@@ -16,7 +17,11 @@ const ICONE_POR_CHAVE = {
 
 /** Grade dos 4 cards de KPI abaixo do hero. */
 export default function CardsIndicadores() {
-  const { dados: indicadores, carregando } = useApi("/decisoria/indicadores");
+  // O card de Favorabilidade é dinâmico: segue o ano selecionado no gráfico.
+  // Quando o usuário clica num ano da linha do tempo, `anoSelecionado` muda,
+  // a rota muda e o useApi rebusca — a favorabilidade passa a ser a daquele ano.
+  const anoSelecionado = useAppStore((s) => s.anoSelecionado);
+  const { dados: indicadores, carregando } = useApi(`/decisoria/indicadores?ano=${anoSelecionado}`);
 
   if (carregando) return <EsqueletoGradeDeCards quantidade={4} />;
   if (!indicadores) return null;
